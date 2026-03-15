@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Study Summarizer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="page-wrapper">
+    <header class="header">
+      <div class="header-inner">
+        <span class="logo">📚</span>
+        <h1>Study Summarizer</h1>
+        <p>Turn your PDFs into clear, student-friendly summaries instantly</p>
+      </div>
+    </header>
+
+    <main class="container">
+
+      <!-- Upload Section -->
+      <div class="card upload-card">
+        <div class="upload-box" id="uploadBox">
+          <div class="upload-icon">☁️</div>
+          <p class="upload-title">Drag & drop your PDF here</p>
+          <p class="upload-sub">or</p>
+          <label for="fileInput" class="btn-upload">Choose File</label>
+          <input type="file" id="fileInput" accept=".pdf" hidden />
+          <p id="fileName" class="file-name">No file chosen</p>
+        </div>
+        <button class="btn-summarize" id="summarizeBtn" disabled>
+          ✨ Summarize
+        </button>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div class="card loader-card" id="loaderCard" hidden>
+        <div class="spinner"></div>
+        <p class="loader-text">Reading and summarizing your PDF...</p>
+        <p class="loader-sub">This may take a few seconds</p>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar" id="statsBar" hidden>
+        <div class="stat">
+          <span class="stat-icon">📄</span>
+          <span id="pageCount">0 pages</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">🔤</span>
+          <span id="wordCount">0 words extracted</span>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">✂️</span>
+          <span id="reductionCount">0% condensed</span>
+        </div>
+      </div>
+
+      <!-- Result Section -->
+      <div class="card result-card" id="resultCard" hidden>
+        <div class="result-header">
+          <h2>📝 Your Summary</h2>
+          <button class="btn-copy" id="copyBtn">📋 Copy</button>
+        </div>
+        <div id="summaryContent" class="summary-content"></div>
+      </div>
+
+      <!-- Error Section -->
+      <div class="card error-card" id="errorCard" hidden>
+        <p id="errorMessage"></p>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
