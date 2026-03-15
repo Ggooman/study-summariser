@@ -43,14 +43,8 @@ uploadBox.addEventListener('drop', (e) => {
   }
 });
 
-// Convert markdown-style text to HTML
+// Convert markdown to HTML
 function formatSummary(text) {
-  // Convert **heading** to <h3>
-  text = text.replace(/\*\*(.+?)\*\*/g, (match, content) => {
-    // If it looks like a heading (standalone line), make it h3
-    return `<strong>${content}</strong>`;
-  });
-
   const lines = text.split('\n');
   let html = '';
   let inList = false;
@@ -62,25 +56,24 @@ function formatSummary(text) {
       continue;
     }
 
-    // Heading lines (lines ending with ** or starting with ##)
     if (line.startsWith('## ') || line.startsWith('# ')) {
       if (inList) { html += '</ul>'; inList = false; }
       html += `<h3>${line.replace(/^#+\s*/, '')}</h3>`;
     }
-    // Bullet points (* or -)
     else if (line.startsWith('* ') || line.startsWith('- ')) {
       if (!inList) { html += '<ul>'; inList = true; }
-      html += `<li>${line.substring(2)}</li>`;
+      // Convert **bold** inside bullets
+      let content = line.substring(2).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += `<li>${content}</li>`;
     }
-    // Bold standalone line = treat as heading
-    else if (line.startsWith('<strong>') && line.endsWith('</strong>')) {
+    else if (line.startsWith('**') && line.endsWith('**')) {
       if (inList) { html += '</ul>'; inList = false; }
-      html += `<h3>${line.replace(/<\/?strong>/g, '')}</h3>`;
+      html += `<h3>${line.replace(/\*\*/g, '')}</h3>`;
     }
-    // Regular paragraph
     else {
       if (inList) { html += '</ul>'; inList = false; }
-      html += `<p>${line}</p>`;
+      let content = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += `<p>${content}</p>`;
     }
   }
 
@@ -118,18 +111,10 @@ summarizeBtn.addEventListener('click', async () => {
       throw new Error(data.error || 'Something went wrong');
     }
 
-    // Calculate stats
-    const extractedWords = data.wordCount || 0;
-    const summaryWords = data.summary.split(' ').length;
-    const pages = data.pages || '?';
-    const reduction = extractedWords > 0
-      ? Math.round((1 - summaryWords / extractedWords) * 100)
-      : 0;
-
     // Show stats
-    document.getElementById('pageCount').textContent = pages + ' page(s)';
-    document.getElementById('wordCount').textContent = extractedWords.toLocaleString() + ' words extracted';
-    document.getElementById('reductionCount').textContent = reduction + '% condensed';
+    document.getElementById('pageCount').textContent = data.pages + ' page(s)';
+    document.getElementById('wordCount').textContent = data.wordCount.toLocaleString() + ' words extracted';
+    document.getElementById('reductionCount').textContent = data.reduction + '% condensed';
     statsBar.hidden = false;
 
     // Show formatted summary

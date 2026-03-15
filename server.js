@@ -7,10 +7,8 @@ const Groq = require('groq-sdk');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve frontend files from the public folder
 app.use(express.static('public'));
 
-// Store uploaded file in memory
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -23,45 +21,75 @@ const upload = multer({
   }
 });
 
-// Set up Groq client
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// Main route — handles PDF upload and summarization
+// Fix text extracted from PDF — adds spaces between merged words
+function cleanText(text) {
+  return text
+    .replace(/([a-z])([A-Z])/g, '$1 $2')       // camelCase fix
+    .replace(/([.,!?;:])([a-zA-Z])/g, '$1 $2')  // punctuation fix
+    .replace(/\s+/g, ' ')                         // remove extra spaces
+    .trim();
+}
+
 app.post('/summarize', upload.single('pdf'), async (req, res) => {
   try {
-    // Check if a file was uploaded
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file uploaded' });
     }
 
-    // Step 1: Extract text from the PDF
+    // Step 1: Extract and clean text from PDF
     const pdfData = await pdfParse(req.file.buffer);
-    const extractedText = pdfData.text;
+    const rawText = pdfData.text;
+    const extractedText = cleanText(rawText);
 
     if (!extractedText || extractedText.trim().length === 0) {
       return res.status(400).json({ error: 'Could not extract text from PDF. It may be a scanned image.' });
     }
 
-    // Step 2: Send text to Groq for summarization
+    // Step 2: Send to Groq with better prompt
     const chatCompletion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'user',
-          content: `You are a helpful study assistant. Please summarize the following study material into clear, concise bullet points that are easy to understand and remember. Group related points together under short headings if possible.\n\nHere is the text:\n\n${extractedText}`
+          content: `You are a helpful study assistant for students. Summarize the following study material into clear bullet points.
+
+Rules:
+- Use ## for main headings
+- Use * for bullet points
+- Keep each bullet point concise (1-2 sentences max)
+- Do NOT add any feedback, commentary, or suggestions
+- Do NOT say things like "please let me know" or "your summary appears"
+- Just give the summary, nothing else
+
+Text to summarize:
+
+${extractedText}`
         }
       ],
       max_tokens: 1024
     });
 
-    // Step 3: Save summary and send everything back to frontend
+    // Step 3: Send back results
     const summary = chatCompletion.choices[0].message.content;
-    const wordCount = extractedText.split(/\s+/).filter(Boolean).length;
+    const extractedWordCount = extractedText.split(/\s+/).filter(Boolean).length;
+    const summaryWordCount = summary.split(/\s+/).filter(Boolean).length;
     const pages = pdfData.numpages;
 
-    res.json({ summary: summary, wordCount: wordCount, pages: pages });
+    // Only show positive condensed % 
+    const reduction = extractedWordCount > summaryWordCount
+      ? Math.round((1 - summaryWordCount / extractedWordCount) * 100)
+      : 0;
+
+    res.json({
+      summary: summary,
+      wordCount: extractedWordCount,
+      pages: pages,
+      reduction: reduction
+    });
 
   } catch (error) {
     console.error('Error:', error.message);
@@ -69,7 +97,6 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
   }
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
