@@ -25,20 +25,22 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// Clean broken text from PDFs
 function cleanText(text) {
   return text
-    .replace(/(\w)-\n(\w)/g, '$1$2')           // fix hyphenated line breaks
-    .replace(/([a-z])([A-Z])/g, '$1 $2')        // fix camelCase merges
-    .replace(/([.,!?;:])([a-zA-Z])/g, '$1 $2')  // fix missing space after punctuation
-    .replace(/([a-zA-Z])(\d)/g, '$1 $2')         // fix letter+number merges
-    .replace(/(\d)([a-zA-Z])/g, '$1 $2')         // fix number+letter merges
-    .replace(/\n{3,}/g, '\n\n')                  // remove excessive line breaks
-    .replace(/\s+/g, ' ')                         // normalize spaces
+    .replace(/(\w)-\n(\w)/g, '$1$2')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([.!?;:,])([a-zA-Z])/g, '$1 $2')
+    .replace(/([a-zA-Z])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-zA-Z])/g, '$1 $2')
+    // Fix words that got merged together - add space before capital in middle of word
+    .replace(/([a-z]{2,})([A-Z][a-z])/g, '$1 $2')
+    // Fix common merges like "andthe" "ofthe" "tothe"
+    .replace(/\b(and|of|to|in|is|it|be|as|at|so|we|he|by|or|on|do|if|me|my|up|an|go|no|us|am)(the|a|an|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|can|this|that|these|those|their|there|they|with|from|into|onto|upon|over|under|about|above|below|between|through|during|before|after|each|every|some|any|all|both|few|more|most|other|such|than|then|when|where|which|while|who|whom|whose|why|how)\b/gi, '$1 $2')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+/g, ' ')
     .trim();
 }
 
-// Split long text into chunks to avoid token limits
 function chunkText(text, maxChunkSize = 3000) {
   const sentences = text.split('. ');
   const chunks = [];
@@ -62,7 +64,6 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'No PDF file uploaded' });
     }
 
-    // Step 1: Extract and clean text
     const pdfData = await pdfParse(req.file.buffer);
     const extractedText = cleanText(pdfData.text);
 
@@ -70,7 +71,6 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'Could not extract text from PDF. It may be a scanned image.' });
     }
 
-    // Step 2: Chunk text if too long
     const chunks = chunkText(extractedText);
     let fullSummary = '';
 
@@ -80,15 +80,18 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
         messages: [
           {
             role: 'system',
-            content: `You are a study assistant. Your job is to summarize study material into bullet points.
-STRICT RULES:
+            content: `You are a study assistant that summarizes text into bullet points.
+STRICT RULES — follow exactly:
 - Use ## for section headings
-- Use * for bullet points  
-- Keep bullets short and clear
-- NEVER add commentary, opinions, or feedback
-- NEVER say "please let me know", "I hope this helps", "your summary", or anything similar
-- NEVER ask the user to revise anything
-- Output ONLY the summary, nothing else`
+- Use * for bullet points
+- Keep each bullet short and clear (1 sentence max)
+- Output ONLY the summary bullet points
+- Do NOT write any introduction or conclusion sentences
+- Do NOT say "Here is a summary" or "I hope this helps"
+- Do NOT add feedback, commentary, or suggestions
+- Do NOT say "please let me know" or "please revise"
+- Do NOT refer to "the text" or "the document"
+- Just output the headings and bullet points, nothing else`
           },
           {
             role: 'user',
@@ -101,7 +104,6 @@ STRICT RULES:
       fullSummary += chatCompletion.choices[0].message.content + '\n\n';
     }
 
-    // Step 3: Send back results
     const extractedWordCount = extractedText.split(/\s+/).filter(Boolean).length;
     const summaryWordCount = fullSummary.split(/\s+/).filter(Boolean).length;
     const pages = pdfData.numpages;
