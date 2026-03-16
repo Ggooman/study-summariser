@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
-const PDFParser = require('pdf2json');
+const pdfParse = require('pdf-parse/lib/pdf-parse.js');
 const Groq = require('groq-sdk');
 
 const app = express();
@@ -25,48 +25,10 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// Extract text using pdf2json
-function extractTextFromPDF(buffer) {
-  return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser();
-
-    pdfParser.on('pdfParser_dataError', (err) => {
-      reject(err.parserError);
-    });
-
-    pdfParser.on('pdfParser_dataReady', (pdfData) => {
-      try {
-        let text = '';
-        const pages = pdfData.Pages || [];
-
-        for (const page of pages) {
-          const texts = page.Texts || [];
-          for (const t of texts) {
-            for (const r of t.R) {
-              text += decodeURIComponent(r.T) + ' ';
-            }
-          }
-          text += '\n\n';
-        }
-
-        resolve({
-          text: text.trim(),
-          pages: pages.length
-        });
-      } catch (e) {
-        reject(e);
-      }
-    });
-
-    pdfParser.parseBuffer(buffer);
-  });
-}
-
 function chunkText(text, maxChunkSize = 3000) {
   const sentences = text.split('. ');
   const chunks = [];
   let current = '';
-
   for (const sentence of sentences) {
     if ((current + sentence).length > maxChunkSize) {
       if (current) chunks.push(current.trim());
@@ -85,14 +47,13 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'No PDF file uploaded' });
     }
 
-    // Step 1: Extract text
-    const { text: extractedText, pages } = await extractTextFromPDF(req.file.buffer);
+    const pdfData = await pdfParse(req.file.buffer);
+    const extractedText = pdfData.text;
 
     if (!extractedText || extractedText.trim().length === 0) {
       return res.status(400).json({ error: 'Could not extract text from PDF. It may be a scanned image.' });
     }
 
-    // Step 2: Chunk and summarize
     const chunks = chunkText(extractedText);
     let fullSummary = '';
 
@@ -103,11 +64,15 @@ app.post('/summarize', upload.single('pdf'), async (req, res) => {
           {
             role: 'system',
             content: `You are a study assistant that summarizes text into bullet points.
+
+IMPORTANT: The text may have been extracted from a PDF and some words may be merged together without spaces (e.g. "teamworkandstrategy" means "teamwork and strategy"). You must intelligently read and understand the text even if words are merged, and produce a clean, properly spaced summary.
+
 STRICT RULES:
 - Use ## for section headings
 - Use * for bullet points
 - Keep each bullet short and clear (1 sentence max)
-- Output ONLY the summary bullet points
+- Output ONLY the summary bullet points with proper spacing
+- Do NOT output merged words — always write proper English with spaces
 - Do NOT write any introduction or conclusion sentences
 - Do NOT say "Here is a summary" or "I hope this helps"
 - Do NOT add feedback, commentary, or suggestions
@@ -116,7 +81,7 @@ STRICT RULES:
           },
           {
             role: 'user',
-            content: `Summarize this into bullet points:\n\n${chunk}`
+            content: `Summarize this into bullet points. Note: some words may be merged together due to PDF extraction — please fix them in your summary:\n\n${chunk}`
           }
         ],
         max_tokens: 1500
@@ -125,9 +90,9 @@ STRICT RULES:
       fullSummary += chatCompletion.choices[0].message.content + '\n\n';
     }
 
-    // Step 3: Return results
     const extractedWordCount = extractedText.split(/\s+/).filter(Boolean).length;
     const summaryWordCount = fullSummary.split(/\s+/).filter(Boolean).length;
+    const pages = pdfData.numpages;
     const reduction = extractedWordCount > summaryWordCount
       ? Math.round((1 - summaryWordCount / extractedWordCount) * 100)
       : 0;
