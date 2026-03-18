@@ -1,20 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Study Summarizer</title>
+  <title>Study Summariser</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <div class="page-wrapper">
-    <header class="header">
-      <div class="header-inner">
+
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="nav-left">
         <span class="logo">📚</span>
-        <h1>Study Summarizer</h1>
-        <p>Turn your PDFs into clear, student-friendly summaries instantly</p>
+        <span class="nav-title">Study Summariser</span>
       </div>
+      <div class="nav-right">
+        <span class="nav-email" id="navEmail"></span>
+        <button class="btn-nav" id="historyBtn">🕐 History</button>
+        <button class="btn-nav" id="darkModeBtn">🌙 Dark</button>
+        <button class="btn-nav btn-logout" id="logoutBtn">Log Out</button>
+      </div>
+    </nav>
+
+    <header class="header">
+      <p>Turn your PDFs into clear, student-friendly summaries instantly</p>
+      <p class="warning">⚠️ Works best with text-based PDFs. PDFs with images or complex layouts may not summarize perfectly.</p>
     </header>
 
     <main class="container">
@@ -25,16 +37,21 @@
           <div class="upload-icon">☁️</div>
           <p class="upload-title">Drag & drop your PDF here</p>
           <p class="upload-sub">or</p>
-          <label for="fileInput" class="btn-upload">Choose File</label>
           <input type="file" id="fileInput" accept=".pdf" hidden />
+          <button class="btn-upload" onclick="document.getElementById('fileInput').click()">Choose File</button>
           <p id="fileName" class="file-name">No file chosen</p>
         </div>
-        <button class="btn-summarize" id="summarizeBtn" disabled>
-          ✨ Summarize
-        </button>
+
+        <!-- Label input -->
+        <div class="label-group">
+          <label for="summaryLabel">📝 Label this summary <span class="hint">(optional)</span></label>
+          <input type="text" id="summaryLabel" placeholder="e.g. Chapter 3 - Biology" />
+        </div>
+
+        <button class="btn-summarize" id="summarizeBtn" disabled>✨ Summarize</button>
       </div>
 
-      <!-- Loading Spinner -->
+      <!-- Loader -->
       <div class="card loader-card" id="loaderCard" hidden>
         <div class="spinner"></div>
         <p class="loader-text">Reading and summarizing your PDF...</p>
@@ -43,35 +60,43 @@
 
       <!-- Stats Bar -->
       <div class="stats-bar" id="statsBar" hidden>
-        <div class="stat">
-          <span class="stat-icon">📄</span>
-          <span id="pageCount">0 pages</span>
-        </div>
-        <div class="stat">
-          <span class="stat-icon">🔤</span>
-          <span id="wordCount">0 words extracted</span>
-        </div>
-        <div class="stat">
-          <span class="stat-icon">✂️</span>
-          <span id="reductionCount">0% condensed</span>
-        </div>
+        <div class="stat"><span class="stat-icon">📄</span><span id="pageCount">0 pages</span></div>
+        <div class="stat"><span class="stat-icon">🔤</span><span id="wordCount">0 words extracted</span></div>
+        <div class="stat"><span class="stat-icon">✂️</span><span id="reductionCount">0% condensed</span></div>
       </div>
 
-      <!-- Result Section -->
+      <!-- Result -->
       <div class="card result-card" id="resultCard" hidden>
         <div class="result-header">
           <h2>📝 Your Summary</h2>
-          <button class="btn-copy" id="copyBtn">📋 Copy</button>
+          <div class="result-actions">
+            <button class="btn-copy" id="copyBtn">📋 Copy</button>
+            <button class="btn-download" id="downloadBtn">⬇️ Download</button>
+          </div>
         </div>
         <div id="summaryContent" class="summary-content"></div>
       </div>
 
-      <!-- Error Section -->
+      <!-- Error -->
       <div class="card error-card" id="errorCard" hidden>
         <p id="errorMessage"></p>
       </div>
 
     </main>
+
+    <!-- History Panel -->
+    <div class="history-overlay" id="historyOverlay" hidden>
+      <div class="history-panel">
+        <div class="history-header">
+          <h2>🕐 Recent Summaries</h2>
+          <button class="btn-close" id="closeHistory">✕</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <p class="history-empty">Loading...</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="script.js"></script>

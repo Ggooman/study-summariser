@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register – Study Summariser</title>
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">📚</div>
+      <h1>Create Account</h1>
+      <p class="auth-sub">Start summarising your study material</p>
+
+      <div class="error-box" id="errorBox" hidden></div>
+      <div class="success-box" id="successBox" hidden></div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="you@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password <span class="hint">(min 6 characters)</span></label>
+        <input type="password" id="password" placeholder="••••••••" />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" placeholder="••••••••" />
+      </div>
+
+      <button class="btn-auth" id="registerBtn">Create Account</button>
+      <p class="auth-switch">Already have an account? <a href="login.html">Log In</a></p>
+    </div>
+  </div>
+  <script>
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const errorBox = document.getElementById('errorBox');
+      const successBox = document.getElementById('successBox');
+      const btn = document.getElementById('registerBtn');
+
+      errorBox.hidden = true;
+      successBox.hidden = true;
+
+      if (password !== confirmPassword) {
+        errorBox.textContent = '❌ Passwords do not match';
+        errorBox.hidden = false;
+        return;
+      }
+
+      btn.textContent = 'Creating account...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        window.location.href = '/index.html';
+      } catch (err) {
+        errorBox.textContent = '❌ ' + err.message;
+        errorBox.hidden = false;
+      } finally {
+        btn.textContent = 'Create Account';
+        btn.disabled = false;
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('registerBtn').click();
+    });
+  </script>
+</body>
+</html>
