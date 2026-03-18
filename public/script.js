@@ -40,7 +40,6 @@ fileInput.addEventListener('change', () => {
   if (file) {
     fileNameDisplay.textContent = '✅ ' + file.name;
     summarizeBtn.disabled = false;
-    // Auto fill label with filename
     const labelInput = document.getElementById('summaryLabel');
     if (!labelInput.value) {
       labelInput.value = file.name.replace('.pdf', '');
@@ -172,14 +171,15 @@ const historyOverlay = document.getElementById('historyOverlay');
 const closeHistory = document.getElementById('closeHistory');
 const historyList = document.getElementById('historyList');
 
-historyBtn.addEventListener('click', async () => {
+async function loadHistory() {
   historyOverlay.hidden = false;
   historyList.innerHTML = '<p class="history-empty">Loading...</p>';
   try {
     const res = await fetch('/history');
+    if (!res.ok) throw new Error('Failed');
     const data = await res.json();
     if (!data.length) {
-      historyList.innerHTML = '<p class="history-empty">No summaries yet!</p>';
+      historyList.innerHTML = '<p class="history-empty">No summaries yet! Summarise a PDF first.</p>';
       return;
     }
     historyList.innerHTML = data.map(s => `
@@ -194,13 +194,20 @@ historyBtn.addEventListener('click', async () => {
         </div>
       </div>
     `).join('');
-  } catch {
-    historyList.innerHTML = '<p class="history-empty">Failed to load history.</p>';
+  } catch (err) {
+    historyList.innerHTML = '<p class="history-empty">Failed to load history. Try again.</p>';
   }
+}
+
+historyBtn.addEventListener('click', loadHistory);
+
+// Close history
+closeHistory.addEventListener('click', () => {
+  historyOverlay.hidden = true;
 });
 
-closeHistory.addEventListener('click', () => historyOverlay.hidden = true);
-historyOverlay.addEventListener('click', (e) => {
+// Click outside to close
+historyOverlay.addEventListener('mousedown', (e) => {
   if (e.target === historyOverlay) {
     historyOverlay.hidden = true;
   }
@@ -231,6 +238,10 @@ async function deleteSummary(id) {
   try {
     await fetch(`/history/${id}`, { method: 'DELETE' });
     document.querySelector(`[data-id="${id}"]`).remove();
+    const remaining = historyList.querySelectorAll('.history-item').length;
+    if (remaining === 0) {
+      historyList.innerHTML = '<p class="history-empty">No summaries yet!</p>';
+    }
   } catch {
     alert('Failed to delete');
   }
