@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Study Summariser</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Hide page until auth check done -->
   <style> body { visibility: hidden; } </style>
 </head>
 <body>
 
   <div class="page-wrapper">
 
-    <!-- Navbar -->
     <nav class="navbar">
       <div class="nav-left">
         <span class="logo">📚</span>
@@ -33,7 +31,6 @@
 
     <main class="container">
 
-      <!-- Upload Section -->
       <div class="card upload-card">
         <div class="upload-box" id="uploadBox">
           <div class="upload-icon">☁️</div>
@@ -50,21 +47,18 @@
         <button class="btn-summarize" id="summarizeBtn" disabled>✨ Summarize</button>
       </div>
 
-      <!-- Loader -->
       <div class="card loader-card" id="loaderCard" hidden>
         <div class="spinner"></div>
         <p class="loader-text">Reading and summarizing your PDF...</p>
         <p class="loader-sub">This may take a few seconds</p>
       </div>
 
-      <!-- Stats Bar -->
       <div class="stats-bar" id="statsBar" hidden>
         <div class="stat"><span class="stat-icon">📄</span><span id="pageCount">0 pages</span></div>
         <div class="stat"><span class="stat-icon">🔤</span><span id="wordCount">0 words extracted</span></div>
         <div class="stat"><span class="stat-icon">✂️</span><span id="reductionCount">0% condensed</span></div>
       </div>
 
-      <!-- Result -->
       <div class="card result-card" id="resultCard" hidden>
         <div class="result-header">
           <h2>📝 Your Summary</h2>
@@ -76,15 +70,14 @@
         <div id="summaryContent" class="summary-content"></div>
       </div>
 
-      <!-- Error -->
       <div class="card error-card" id="errorCard" hidden>
         <p id="errorMessage"></p>
       </div>
 
     </main>
 
-    <!-- History Panel -->
-    <div class="history-overlay" id="historyOverlay" hidden>
+    <!-- History Panel — hidden by default, only opens on button click -->
+    <div class="history-overlay" id="historyOverlay">
       <div class="history-panel" id="historyPanel">
         <div class="history-header">
           <h2>🕐 Recent Summaries</h2>

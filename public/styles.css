@@ -138,7 +138,6 @@ body {
   transition: opacity 0.2s;
 }
 .btn-upload:hover { opacity: 0.88; }
-
 .file-name { margin-top: 12px; font-size: 0.85rem; color: var(--primary); font-weight: 500; }
 
 /* Label input */
@@ -280,16 +279,21 @@ body {
 }
 [data-theme="dark"] .error-card { background: #2d1f1f; color: #fc8181; }
 
-/* History overlay */
+/* History overlay — hidden by default using display none */
 .history-overlay {
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
   z-index: 200;
-  display: flex;
   justify-content: flex-end;
-  pointer-events: auto;
+  cursor: pointer;
 }
+
+.history-overlay.open {
+  display: flex;
+}
+
 .history-panel {
   background: var(--card);
   width: 100%;
@@ -300,7 +304,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  cursor: default;
 }
+
 .history-header {
   display: flex;
   justify-content: space-between;

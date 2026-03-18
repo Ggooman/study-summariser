@@ -169,21 +169,21 @@ const closeHistory = document.getElementById('closeHistory');
 const historyList = document.getElementById('historyList');
 
 function closeHistoryPanel() {
-  historyOverlay.hidden = true;
+  historyOverlay.classList.remove('open');
 }
 
 async function loadHistory() {
-  historyOverlay.hidden = false;
+  historyOverlay.classList.add('open');
   historyList.innerHTML = '<p class="history-empty">Loading...</p>';
   try {
     const res = await fetch('/history');
-    if (res.status === 401 || res.redirected) {
+    if (res.status === 401) {
       historyList.innerHTML = '<p class="history-empty">Please log in again.</p>';
       return;
     }
     const data = await res.json();
     if (!Array.isArray(data) || !data.length) {
-      historyList.innerHTML = '<p class="history-empty">No summaries yet! Summarise a PDF first.</p>';
+      historyList.innerHTML = '<p class="history-empty">No summaries yet!</p>';
       return;
     }
     historyList.innerHTML = data.map(s => `
@@ -206,7 +206,6 @@ async function loadHistory() {
 historyBtn.addEventListener('click', loadHistory);
 closeHistory.addEventListener('click', closeHistoryPanel);
 
-// Click outside panel to close
 historyOverlay.addEventListener('click', (e) => {
   if (!historyPanel.contains(e.target)) {
     closeHistoryPanel();
