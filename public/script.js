@@ -201,7 +201,9 @@ historyBtn.addEventListener('click', async () => {
 
 closeHistory.addEventListener('click', () => historyOverlay.hidden = true);
 historyOverlay.addEventListener('click', (e) => {
-  if (e.target === historyOverlay) historyOverlay.hidden = true;
+  if (e.target === historyOverlay) {
+    historyOverlay.hidden = true;
+  }
 });
 
 // View summary from history

@@ -288,6 +288,7 @@ body {
   z-index: 200;
   display: flex;
   justify-content: flex-end;
+  pointer-events: auto;
 }
 .history-panel {
   background: var(--card);
