@@ -1,12 +1,17 @@
-// Check auth on load
+// Check auth on load — hide page until confirmed
 window.addEventListener('load', async () => {
-  const res = await fetch('/auth/me');
-  const data = await res.json();
-  if (!data.loggedIn) {
-    window.location.href = '/login.html';
-    return;
+  try {
+    const res = await fetch('/auth/me');
+    const data = await res.json();
+    if (!data.loggedIn) {
+      window.location.replace('/login.html');
+      return;
+    }
+    document.getElementById('navEmail').textContent = data.email;
+    document.body.style.visibility = 'visible';
+  } catch {
+    window.location.replace('/login.html');
   }
-  document.getElementById('navEmail').textContent = data.email;
 });
 
 // Dark mode
@@ -26,7 +31,7 @@ darkBtn.addEventListener('click', () => {
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch('/auth/logout', { method: 'POST' });
-  window.location.href = '/login.html';
+  window.location.replace('/login.html');
 });
 
 // File input
@@ -41,9 +46,7 @@ fileInput.addEventListener('change', () => {
     fileNameDisplay.textContent = '✅ ' + file.name;
     summarizeBtn.disabled = false;
     const labelInput = document.getElementById('summaryLabel');
-    if (!labelInput.value) {
-      labelInput.value = file.name.replace('.pdf', '');
-    }
+    if (!labelInput.value) labelInput.value = file.name.replace('.pdf', '');
   } else {
     fileNameDisplay.textContent = 'No file chosen';
     summarizeBtn.disabled = true;
@@ -74,7 +77,6 @@ function formatSummary(text) {
   const lines = text.split('\n');
   let html = '';
   let inList = false;
-
   for (let line of lines) {
     line = line.trim();
     if (!line) {
@@ -105,32 +107,26 @@ function formatSummary(text) {
 summarizeBtn.addEventListener('click', async () => {
   const file = fileInput.files[0];
   if (!file) return;
-
   const label = document.getElementById('summaryLabel').value.trim() || file.name.replace('.pdf', '');
-
   document.getElementById('resultCard').hidden = true;
   document.getElementById('errorCard').hidden = true;
   document.getElementById('statsBar').hidden = true;
   document.getElementById('loaderCard').hidden = false;
   summarizeBtn.disabled = true;
   summarizeBtn.textContent = '⏳ Summarizing...';
-
   const formData = new FormData();
   formData.append('pdf', file);
   formData.append('label', label);
-
   try {
     const response = await fetch('/summarize', { method: 'POST', body: formData });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Something went wrong');
-
     document.getElementById('pageCount').textContent = data.pages + ' page(s)';
     document.getElementById('wordCount').textContent = data.wordCount.toLocaleString() + ' words extracted';
     document.getElementById('reductionCount').textContent = data.reduction + '% condensed';
     document.getElementById('statsBar').hidden = false;
     document.getElementById('summaryContent').innerHTML = formatSummary(data.summary);
     document.getElementById('resultCard').hidden = false;
-
   } catch (err) {
     document.getElementById('errorCard').hidden = false;
     document.getElementById('errorMessage').textContent = '❌ ' + err.message;
@@ -152,7 +148,7 @@ document.getElementById('copyBtn').addEventListener('click', () => {
   });
 });
 
-// Download as txt
+// Download
 document.getElementById('downloadBtn').addEventListener('click', () => {
   const text = document.getElementById('summaryContent').innerText;
   const label = document.getElementById('summaryLabel').value || 'summary';
@@ -165,20 +161,28 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-// History panel
+// History
 const historyBtn = document.getElementById('historyBtn');
 const historyOverlay = document.getElementById('historyOverlay');
+const historyPanel = document.getElementById('historyPanel');
 const closeHistory = document.getElementById('closeHistory');
 const historyList = document.getElementById('historyList');
+
+function closeHistoryPanel() {
+  historyOverlay.hidden = true;
+}
 
 async function loadHistory() {
   historyOverlay.hidden = false;
   historyList.innerHTML = '<p class="history-empty">Loading...</p>';
   try {
     const res = await fetch('/history');
-    if (!res.ok) throw new Error('Failed');
+    if (res.status === 401 || res.redirected) {
+      historyList.innerHTML = '<p class="history-empty">Please log in again.</p>';
+      return;
+    }
     const data = await res.json();
-    if (!data.length) {
+    if (!Array.isArray(data) || !data.length) {
       historyList.innerHTML = '<p class="history-empty">No summaries yet! Summarise a PDF first.</p>';
       return;
     }
@@ -195,25 +199,20 @@ async function loadHistory() {
       </div>
     `).join('');
   } catch (err) {
-    historyList.innerHTML = '<p class="history-empty">Failed to load history. Try again.</p>';
+    historyList.innerHTML = '<p class="history-empty">Failed to load history.</p>';
   }
 }
 
 historyBtn.addEventListener('click', loadHistory);
+closeHistory.addEventListener('click', closeHistoryPanel);
 
-// Close history
-closeHistory.addEventListener('click', () => {
-  historyOverlay.hidden = true;
-});
-
-// Click outside to close
-historyOverlay.addEventListener('mousedown', (e) => {
-  if (e.target === historyOverlay) {
-    historyOverlay.hidden = true;
+// Click outside panel to close
+historyOverlay.addEventListener('click', (e) => {
+  if (!historyPanel.contains(e.target)) {
+    closeHistoryPanel();
   }
 });
 
-// View summary from history
 async function viewSummary(id) {
   try {
     const res = await fetch(`/history/${id}`);
@@ -225,21 +224,19 @@ async function viewSummary(id) {
     document.getElementById('pageCount').textContent = data.pages + ' page(s)';
     document.getElementById('wordCount').textContent = data.wordCount.toLocaleString() + ' words extracted';
     document.getElementById('reductionCount').textContent = 'Saved summary';
-    historyOverlay.hidden = true;
+    closeHistoryPanel();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch {
     alert('Failed to load summary');
   }
 }
 
-// Delete summary
 async function deleteSummary(id) {
   if (!confirm('Delete this summary?')) return;
   try {
     await fetch(`/history/${id}`, { method: 'DELETE' });
     document.querySelector(`[data-id="${id}"]`).remove();
-    const remaining = historyList.querySelectorAll('.history-item').length;
-    if (remaining === 0) {
+    if (!historyList.querySelectorAll('.history-item').length) {
       historyList.innerHTML = '<p class="history-empty">No summaries yet!</p>';
     }
   } catch {

@@ -35,7 +35,7 @@ app.use(express.static('public'));
 // Auth middleware
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    return res.redirect('/login.html');
+    return res.status(401).json({ error: 'Not authenticated' });
   }
   next();
 }

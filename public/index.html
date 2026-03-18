@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Study Summariser</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Hide page until auth check done -->
+  <style> body { visibility: hidden; } </style>
 </head>
 <body>
 
@@ -41,13 +43,10 @@
           <button class="btn-upload" onclick="document.getElementById('fileInput').click()">Choose File</button>
           <p id="fileName" class="file-name">No file chosen</p>
         </div>
-
-        <!-- Label input -->
         <div class="label-group">
           <label for="summaryLabel">📝 Label this summary <span class="hint">(optional)</span></label>
           <input type="text" id="summaryLabel" placeholder="e.g. Chapter 3 - Biology" />
         </div>
-
         <button class="btn-summarize" id="summarizeBtn" disabled>✨ Summarize</button>
       </div>
 
@@ -86,14 +85,12 @@
 
     <!-- History Panel -->
     <div class="history-overlay" id="historyOverlay" hidden>
-      <div class="history-panel">
+      <div class="history-panel" id="historyPanel">
         <div class="history-header">
           <h2>🕐 Recent Summaries</h2>
           <button class="btn-close" id="closeHistory">✕</button>
         </div>
-        <div id="historyList" class="history-list">
-          <p class="history-empty">Loading...</p>
-        </div>
+        <div id="historyList" class="history-list"></div>
       </div>
     </div>
 
